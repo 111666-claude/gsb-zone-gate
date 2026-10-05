@@ -1,7 +1,4 @@
-"""副本门槛：等级、前置成就、冷却与每日次数，用生成器逐个产出。
-
-缺陷：等级用大于（正好等于不放行）、完全不看前置成就、不看冷却、不封顶每日次数。
-"""
+"""副本门槛：等级、前置成就、冷却与每日次数，用生成器逐个产出。"""
 
 
 class Gates:
@@ -13,9 +10,18 @@ class Gates:
         self.counts = {}
 
     def allowed(self, player, name, level, earned, day, at_ms):
-        """判定一个副本能不能进。缺陷：等级用大于、不看前置、不看冷却、不看次数。"""
+        """判定一个副本能不能进。"""
         zone = self.zones[name]
-        return level > zone["level"]
+        if level < zone["level"]:
+            return False
+        if not all(req in earned for req in zone["requires"]):
+            return False
+        last = self.last.get((player, name))
+        if last is not None and at_ms - last < zone["cooldown_ms"]:
+            return False
+        if self.counts.get((player, day, name), 0) >= zone["daily_limit"]:
+            return False
+        return True
 
     def enter(self, player, name, day, at_ms):
         """记录一次进入，返回是否放行。"""
